@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <stdarg.h>
+#include <stdbool.h>
 #include <errno.h>
 #include <string.h>
 #include <sys/types.h>
@@ -70,7 +72,29 @@
 
 
  */
+typedef struct {
+  int32_t physicalcpu;
+  int32_t physicalcpu_max;
+  int32_t logicalcpu;
+  int32_t logicalcpu_max;
+  int32_t l1dcachesize;
+  int32_t l1icachesize;
+  int32_t l2cachesize;
+  int32_t l3cachesize;
+  // These values provide the number of CPUs of the same type that
+  // share L2 and L3 caches. If a cache is not present then the
+  // selector will return and error.
+  int32_t cpusperl2;
+  int32_t cpusperl3;
 
+  // These values provide a bitmap, where bit number of CPUs of the
+  // same type that share L2 and L3 caches. If a cache is not present
+  // then the selector will return and error.
+  int32_t l2perflevels;
+  int32_t l3perflevels;
+
+  char *name;
+} PerfLevelN;
 
 typedef struct {
 
@@ -94,6 +118,8 @@ typedef struct {
 
 
   /* CPU */
+  int32_t nperflevels;
+  PerfLevelN *perflevelN;
   int32_t logicalcpu;
   int32_t logicalcpu_max;
   int32_t physicalcpu;
@@ -116,69 +142,183 @@ typedef struct {
   int64_t tbfrequency;
 } SysctlHW;
 
+static const int64_t FAILED_FETCH = -9999;
+
 // NOTES:
 // Docs used:
+// - output of `sysctl -a`
 // - https://developer.apple.com/documentation/kernel/1387446-sysctlbyname/determining_system_capabilities
 // - Comments in /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/sysctl.h
 //   (search for hw.memsize and look at the comment there)
 // - man 3 sysctl
 
-#define GetSystemInfo(name, retvalPtr) do {                             \
-    size_t size = sizeof(*(retvalPtr));                                 \
-                                                                        \
-    if (sysctlbyname((name), (retvalPtr), &size, NULL, 0) < 0) {        \
-      fprintf(stderr, "Failed to get " name ": %s\n", strerror(errno)); \
-      perror("sysctl");                                                 \
-      return 1;                                                         \
-    }                                                                   \
-  } while(0)
-
 #define KB(n)   (n) * 1024
 #define MB(n) KB(n) * 1024
 #define GB(n) MB(n) * 1024
 
+bool GetSystemInfo_(const char *name, void *retvalPtr, size_t size)
+{
+  if (sysctlbyname(name, retvalPtr, &size, NULL, 0) < 0) {
+    fprintf(stderr,
+            "Failed to get sysctlbyname(\"%s\", ...): %s\n",
+            name, strerror(errno));
+    return false;
+  }
+
+  return true;
+}
+#define GetSystemInfo(name, retvalPtr) do {             \
+    const size_t size = sizeof(*(retvalPtr));           \
+    if (!GetSystemInfo_((name), (retvalPtr), size)) {   \
+      *(retvalPtr) = FAILED_FETCH;                      \
+    }                                                   \
+  } while(0)
+
+
+// NOTES: Leaks memory. Don't care as program isn't long running.
+const char *FormatStr(const char *fmt, ...)
+{
+
+  va_list ap;
+
+  va_start(ap, fmt);
+
+  int len   = vsnprintf(NULL, 0, fmt, ap) + 1;
+  char *str = malloc(len);
+
+  if (str == NULL) {
+    return NULL;
+  }
+
+  (void) vsnprintf(str, len, fmt, ap);
+
+  va_end(ap);
+
+  return str;
+}
+
+// TODO(mudit): Figure out how to report a failed fetch for a name aka
+//              val = FAILED_FETCH in a nice human readable manner
 void PrintSysctlHW(const SysctlHW *const hw)
 {
   printf("Processor:\n");
+
   printf("\tPhysical cores:      %d (enabled = %d)\n",
          hw->physicalcpu_max, hw->physicalcpu);
   printf("\tLogical cores:       %d (enabled = %d)\n",
          hw->logicalcpu_max, hw->logicalcpu);
-  printf("\tCPU type:            %d (subtype = %d)\n",
-         hw->cputype, hw->cpusubtype);
+
+  for (int32_t i = 0; i < hw->nperflevels; ++i) {
+    printf("\tCore type:           %s\n", hw->perflevelN[i].name);
+    printf("\t\tPhysical:       %d (max for this boot = %d)\n",
+           hw->perflevelN[i].physicalcpu, hw->perflevelN[i].physicalcpu_max);
+    printf("\t\tLogical:        %d (max for this boot = %d)\n",
+           hw->perflevelN[i].logicalcpu, hw->perflevelN[i].logicalcpu_max);
+  }
+
+  printf("\tCPU type:            %d (subtype = %d, threadtype = %d)\n",
+         hw->cputype, hw->cpusubtype, hw->cputhreadtype);
   printf("\tByte order:          %s Endian (%d)\n",
          hw->byteorder == 1234 ? "Little" : "Big", hw->byteorder);
 
   printf("Memory:\n");
   printf("\tTotal physical:      %lld GB\n",
          hw->memsize/(GB(1)));
+  printf("\tCache line size:     %lld bytes\n",
+         hw->cachelinesize);
+
+  // TODO(mudit): Improve reporting of cache sizes per core type
+  printf("\tL1 data cache size:  %lld bytes\n",
+         hw->l1dcachesize);
+  for (int32_t i = 0; i < hw->nperflevels; ++i) {
+    printf("\t\t%s:          %d bytes\n",
+           hw->perflevelN[i].name, hw->perflevelN[i].l1dcachesize);
+  }
+
+  printf("\tL1 inst cache size:  %lld bytes\n",
+         hw->l1icachesize);
+  for (int32_t i = 0; i < hw->nperflevels; ++i) {
+    printf("\t\t%s:          %d bytes\n",
+           hw->perflevelN[i].name, hw->perflevelN[i].l1icachesize);
+  }
+
+  printf("\tL2 cache size:       %lld bytes\n",
+         hw->l2cachesize);
+  for (int32_t i = 0; i < hw->nperflevels; ++i) {
+    printf("\t\t%s:          %d bytes\n",
+           hw->perflevelN[i].name, hw->perflevelN[i].l2cachesize);
+  }
+
+  printf("\tL3 cache size:       %lld bytes\n",
+         hw->l3cachesize);
+  for (int32_t i = 0; i < hw->nperflevels; ++i) {
+    printf("\t\t%s:          %d bytes\n",
+           hw->perflevelN[i].name, hw->perflevelN[i].l3cachesize);
+  }
+
 
   printf("OS:\n");
   printf("\tTime base frequency: %lld\n",
          hw->tbfrequency);
+  printf("\tPage size:           %lld KB (%lld bytes)\n",
+         hw->pagesize/(KB(1)), hw->pagesize);
 }
 
 int main(void)
 {
   SysctlHW hw = {0};
 
+
   /* CPU */
+  GetSystemInfo("hw.nperflevels", &hw.nperflevels);
+  PerfLevelN perflevelN[hw.nperflevels];
+  hw.perflevelN = perflevelN;
+
+  const char *buffers[hw.nperflevels][128];
+
+  for (int32_t i = 0; i < hw.nperflevels; ++i) {
+    hw.perflevelN[i].name = (char *)buffers[i];
+    memset(hw.perflevelN[i].name, 0, sizeof(*buffers)/sizeof(**buffers));
+
+    GetSystemInfo(FormatStr("hw.perflevel%d.physicalcpu", i), &hw.perflevelN[i].physicalcpu);
+    GetSystemInfo(FormatStr("hw.perflevel%d.physicalcpu_max", i), &hw.perflevelN[i].physicalcpu_max);
+    GetSystemInfo(FormatStr("hw.perflevel%d.logicalcpu", i), &hw.perflevelN[i].logicalcpu);
+    GetSystemInfo(FormatStr("hw.perflevel%d.logicalcpu_max", i), &hw.perflevelN[i].logicalcpu_max);
+    GetSystemInfo(FormatStr("hw.perflevel%d.l1dcachesize", i), &hw.perflevelN[i].l1dcachesize);
+    GetSystemInfo(FormatStr("hw.perflevel%d.l1icachesize", i), &hw.perflevelN[i].l1icachesize);
+    GetSystemInfo(FormatStr("hw.perflevel%d.l2cachesize", i), &hw.perflevelN[i].l2cachesize);
+    GetSystemInfo(FormatStr("hw.perflevel%d.l3cachesize", i), &hw.perflevelN[i].l3cachesize);
+    GetSystemInfo(FormatStr("hw.perflevel%d.cpusperl2", i), &hw.perflevelN[i].cpusperl2);
+    GetSystemInfo(FormatStr("hw.perflevel%d.cpusperl3", i), &hw.perflevelN[i].cpusperl3);
+    GetSystemInfo(FormatStr("hw.perflevel%d.l2perflevels", i), &hw.perflevelN[i].l2perflevels);
+    GetSystemInfo(FormatStr("hw.perflevel%d.l3perflevels", i), &hw.perflevelN[i].l3perflevels);
+    GetSystemInfo_(FormatStr("hw.perflevel%d.name", i), hw.perflevelN[i].name, 128);
+  }
+
   GetSystemInfo("hw.physicalcpu_max", &hw.physicalcpu_max);
   GetSystemInfo("hw.physicalcpu", &hw.physicalcpu);
   GetSystemInfo("hw.logicalcpu_max", &hw.logicalcpu_max);
   GetSystemInfo("hw.logicalcpu", &hw.logicalcpu);
   GetSystemInfo("hw.cputype", &hw.cputype);
   GetSystemInfo("hw.cpusubtype", &hw.cpusubtype);
+  GetSystemInfo("hw.cputhreadtype", &hw.cputhreadtype);
   GetSystemInfo("hw.byteorder", &hw.byteorder);
 
   /* Memory */
   GetSystemInfo("hw.memsize", &hw.memsize);
+  GetSystemInfo("hw.cachelinesize", &hw.cachelinesize);
+  GetSystemInfo("hw.l1dcachesize", &hw.l1dcachesize);
+  GetSystemInfo("hw.l1icachesize", &hw.l1icachesize);
+  GetSystemInfo("hw.l2cachesize", &hw.l2cachesize);
+  GetSystemInfo("hw.l3cachesize", &hw.l3cachesize);
 
   /* OS */
   GetSystemInfo("hw.tbfrequency", &hw.tbfrequency);
-
+  GetSystemInfo("hw.pagesize", &hw.pagesize);
 
   PrintSysctlHW(&hw);
+
+  // TODO(mudit): Print sizes of all old style built in C types
 
   return 0;
 }
