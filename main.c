@@ -202,18 +202,28 @@ const char *FormatStr(const char *fmt, ...)
 void PrintSysctlHW(const SysctlHW *const hw)
 {
   printf("Processor:\n");
-
+  printf("\tNumber of packages:  %d\n",
+         hw->packages);
   printf("\tPhysical cores:      %d (enabled = %d)\n",
          hw->physicalcpu_max, hw->physicalcpu);
   printf("\tLogical cores:       %d (enabled = %d)\n",
          hw->logicalcpu_max, hw->logicalcpu);
 
   for (int32_t i = 0; i < hw->nperflevels; ++i) {
-    printf("\tCore type:           %s\n", hw->perflevelN[i].name);
+    printf("\tCore type:           %s\n",
+           hw->perflevelN[i].name);
     printf("\t\tPhysical:       %d (max for this boot = %d)\n",
            hw->perflevelN[i].physicalcpu, hw->perflevelN[i].physicalcpu_max);
     printf("\t\tLogical:        %d (max for this boot = %d)\n",
            hw->perflevelN[i].logicalcpu, hw->perflevelN[i].logicalcpu_max);
+    printf("\t\tL1 data cache:  %d bytes\n",
+           hw->perflevelN[i].l1dcachesize);
+    printf("\t\tL1 inst cache:  %d bytes\n",
+           hw->perflevelN[i].l1icachesize);
+    printf("\t\tL2 cache:       %d bytes\n",
+           hw->perflevelN[i].l2cachesize);
+    printf("\t\tL3 cache:       %d bytes\n",
+           hw->perflevelN[i].l3cachesize);
   }
 
   printf("\tCPU type:            %d (subtype = %d, threadtype = %d)\n",
@@ -226,35 +236,14 @@ void PrintSysctlHW(const SysctlHW *const hw)
          hw->memsize/(GB(1)));
   printf("\tCache line size:     %lld bytes\n",
          hw->cachelinesize);
-
-  // TODO(mudit): Improve reporting of cache sizes per core type
   printf("\tL1 data cache size:  %lld bytes\n",
          hw->l1dcachesize);
-  for (int32_t i = 0; i < hw->nperflevels; ++i) {
-    printf("\t\t%s:          %d bytes\n",
-           hw->perflevelN[i].name, hw->perflevelN[i].l1dcachesize);
-  }
-
   printf("\tL1 inst cache size:  %lld bytes\n",
          hw->l1icachesize);
-  for (int32_t i = 0; i < hw->nperflevels; ++i) {
-    printf("\t\t%s:          %d bytes\n",
-           hw->perflevelN[i].name, hw->perflevelN[i].l1icachesize);
-  }
-
   printf("\tL2 cache size:       %lld bytes\n",
          hw->l2cachesize);
-  for (int32_t i = 0; i < hw->nperflevels; ++i) {
-    printf("\t\t%s:          %d bytes\n",
-           hw->perflevelN[i].name, hw->perflevelN[i].l2cachesize);
-  }
-
   printf("\tL3 cache size:       %lld bytes\n",
          hw->l3cachesize);
-  for (int32_t i = 0; i < hw->nperflevels; ++i) {
-    printf("\t\t%s:          %d bytes\n",
-           hw->perflevelN[i].name, hw->perflevelN[i].l3cachesize);
-  }
 
 
   printf("OS:\n");
@@ -270,6 +259,7 @@ int main(void)
 
 
   /* CPU */
+  GetSystemInfo("hw.packages", &hw.packages);
   GetSystemInfo("hw.nperflevels", &hw.nperflevels);
   PerfLevelN perflevelN[hw.nperflevels];
   hw.perflevelN = perflevelN;
