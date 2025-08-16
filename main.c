@@ -72,6 +72,12 @@
 
 
  */
+
+typedef struct {
+  const char *brand_string;
+  int32_t virtual_address_size;
+} MachDep;
+
 typedef struct {
   int32_t physicalcpu;
   int32_t physicalcpu_max;
@@ -140,6 +146,8 @@ typedef struct {
    *
    */
   int64_t tbfrequency;
+
+  MachDep machdep;
 } SysctlHW;
 
 static const int64_t FAILED_FETCH = -9999;
@@ -244,6 +252,8 @@ void PrintSysctlHW(const SysctlHW *const hw)
          hw->l2cachesize);
   printf("\tL3 cache size:       %lld bytes\n",
          hw->l3cachesize);
+  printf("\tVirtual addr size:   %d bits (min=%#llx, max=%#llx)\n",
+         hw->machdep.virtual_address_size, (uint64_t)0, (uint64_t)1 << hw->machdep.virtual_address_size);
 
 
   printf("OS:\n");
@@ -301,6 +311,7 @@ int main(void)
   GetSystemInfo("hw.l1icachesize", &hw.l1icachesize);
   GetSystemInfo("hw.l2cachesize", &hw.l2cachesize);
   GetSystemInfo("hw.l3cachesize", &hw.l3cachesize);
+  GetSystemInfo("machdep.virtual_address_size", &hw.machdep.virtual_address_size);
 
   /* OS */
   GetSystemInfo("hw.tbfrequency", &hw.tbfrequency);
