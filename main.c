@@ -316,7 +316,7 @@ void PrintSysctl(const Sysctl *const sysctl)
          sysctl->hw.l2cachesize);
   printf("\tL3 cache size:       %lld bytes\n",
          sysctl->hw.l3cachesize);
-  printf("\tVirtual addr size:   %d bits (min = %#llx, max = %#llx)\n",
+  printf("\tVirtual addr size:   %d bits (user space = %#llx to %#018llx)\n",
          sysctl->machdep.virtual_address_size, (uint64_t)0,
          ((uint64_t)1 << sysctl->machdep.virtual_address_size) - 1);
 
