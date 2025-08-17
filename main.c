@@ -9,74 +9,20 @@
 #include <sys/sysctl.h>
 #include <mach/machine.h>
 
-/**
- *            Name                         Type          Changeable
-           hw.activecpu                 int32_t       no
-           hw.byteorder                 int32_t       no
-           hw.cacheconfig               uint64_t[]    no
-           hw.cachelinesize             int64_t       no
-           hw.cachesize                 uint64_t[]    no
-           hw.cpu64bit_capable          int32_t       no
-           hw.cpufamily                 uint32_t      no
-           hw.cpufrequency              int64_t       no
-           hw.cpufrequency_max          int64_t       no
-           hw.cpufrequency_min          int64_t       no
-           hw.cpusubtype                int32_t       no
-           hw.cputhreadtype             int32_t       no
-           hw.cputype                   int32_t       no
-           hw.l1dcachesize              int64_t       no
-           hw.l1icachesize              int64_t       no
-           hw.l2cachesize               int64_t       no
-           hw.l3cachesize               int64_t       no
-           hw.logicalcpu                int32_t       no
-           hw.logicalcpu_max            int32_t       no
-           hw.machine                   char[]        no
-           hw.memsize                   int64_t       no
-           hw.model                     char[]        no
-           hw.ncpu                      int32_t       no
-           hw.packages                  int32_t       no
-           hw.pagesize                  int64_t       no
-           hw.physicalcpu               int32_t       no
-           hw.physicalcpu_max           int32_t       no
-           hw.tbfrequency               int64_t       no
-
-     hw.byteorder
-             The byte order (4321 or 1234).
-
-     hw.model
-             The machine model.
-
-     hw.ncpu
-             The number of cpus. This attribute is deprecated and it is
-             recommended that hw.logicalcpu, hw.logicalcpu_max,
-             hw.physicalcpu, or hw.physicalcpu_max be used instead.
-
-     hw.logicalcpu
-             The number of logical processors available in the current power
-             management mode.
-
-     hw.logicalcpu_max
-             The maximum number of logical processors that could be available
-             this boot.
-
-     hw.physicalcpu
-             The number of physical processors available in the current power
-             management mode.
-
-     hw.physicalcpu_max
-             The maximum number of physical processors that could be available
-             this boot.
-
-     hw.pagesize
-             The software page size in bytes.
-
-
- */
 
 typedef struct {
-  const char *brand_string;
+  char    brand_string[32];
   int32_t virtual_address_size;
+  struct {
+    int32_t cores_per_package;
+    int32_t logical_per_package;
+    int32_t thread_count;
+  } cpu;
 } MachDep;
+
+typedef struct {
+  char version[128];
+} Kern;
 
 typedef struct {
   int32_t physicalcpu;
@@ -98,57 +44,36 @@ typedef struct {
   // then the selector will return and error.
   int32_t l2perflevels;
   int32_t l3perflevels;
-
-  char *name;
+  char    *name;
 } PerfLevelN;
 
 typedef struct {
-
-  /* uint64_t[] cacheconfig; */
-  int64_t cachelinesize;
-  /* uint64_t[] cachesize; */
-  int32_t cpu64bit_capable;
-  uint32_t cpufamily;
-  int32_t cputhreadtype;
-
-  int64_t l1dcachesize;
-  int64_t l1icachesize;
-  int64_t l2cachesize;
-  int64_t l3cachesize;
-
-  char product[128]; /* alias for deprecated name "hw.machine" */
-  char target[128]; /* alias for deprecated name "hw.model" */
-
-  int32_t packages;
-  int64_t pagesize;
-
-
-  /* CPU */
-  int32_t nperflevels;
-  PerfLevelN *perflevelN;
-  int32_t logicalcpu;
-  int32_t logicalcpu_max;
-  int32_t physicalcpu;
-  int32_t physicalcpu_max;
-  cpu_type_t cputype;
+  int32_t       cpufamily;
+  int32_t       cpusubfamily;
+  int32_t       packages;
+  int32_t       nperflevels;
+  int32_t       byteorder;
+  cpu_type_t    cputype;
   cpu_subtype_t cpusubtype;
-  int32_t byteorder;
+  int32_t       cputhreadtype;
+  int32_t       cpu64bit_capable;
 
-  /* Memory */
-  int64_t memsize;
+  int64_t       memsize;
+  int64_t       pagesize;
+  int64_t       cachelinesize;
+  int64_t       l1dcachesize;
+  int64_t       l1icachesize;
+  int64_t       l2cachesize;
+  int64_t       l3cachesize;
+  int64_t       tbfrequency;
+  PerfLevelN    *perflevelN;
+} HW;
 
-
-  /* OS
-   *   hw.tbfrequency - This gives the time base frequency used by the OS and is the basis of
-   *                    all timing services. In general is is better to use mach's or higher level
-   *                    timing services, but this value is needed to convert the PPC Time Base registers
-   *                    to real time.
-   *
-   */
-  int64_t tbfrequency;
-
+typedef struct {
+  Kern    kern;
   MachDep machdep;
-} SysctlHW;
+  HW      hw;
+} Sysctl;
 
 static const int64_t FAILED_FETCH = -9999;
 
@@ -167,9 +92,11 @@ static const int64_t FAILED_FETCH = -9999;
 bool GetSystemInfo_(const char *name, void *retvalPtr, size_t size)
 {
   if (sysctlbyname(name, retvalPtr, &size, NULL, 0) < 0) {
+#ifndef NDEBUG
     fprintf(stderr,
             "Failed to get sysctlbyname(\"%s\", ...): %s\n",
             name, strerror(errno));
+#endif // NDEBUG
     return false;
   }
 
@@ -205,119 +132,265 @@ const char *FormatStr(const char *fmt, ...)
   return str;
 }
 
+// CPUFAMILY_ARM_FIRESTORM_ICESTORM, etc are defined in mach/machine.h
+// in system headers
+const char *GetCPUFamilyName(int32_t family)
+{
+  // NOTES: Returning pointers to static strings is fine as they are
+  // in the readonly data segement of the binary image (.rodata/.rdata
+  // sections in asm for e.g.)  and hence have stable global pointers
+  switch(family) {
+    case CPUFAMILY_ARM_LIGHTNING_THUNDER:
+      return "ARM Lightning/Thunder";
+    case CPUFAMILY_ARM_FIRESTORM_ICESTORM:
+      return "ARM Firestorm/Icestorm";
+    case CPUFAMILY_ARM_BLIZZARD_AVALANCHE:
+      return "ARM Blizzard/Avalanche";
+    case CPUFAMILY_ARM_EVEREST_SAWTOOTH:
+      return "ARM Everest/Sawtooth";
+
+    case CPUFAMILY_INTEL_PENRYN:
+      return "Intel Penryn";
+    case CPUFAMILY_INTEL_NEHALEM:
+      return "Intel Nehalem";
+    case CPUFAMILY_INTEL_WESTMERE:
+      return "Intel Westmere";
+    case CPUFAMILY_INTEL_SANDYBRIDGE:
+      return "Intel Sandybridge";
+    case CPUFAMILY_INTEL_IVYBRIDGE:
+      return "Intel Ivybridge";
+    case CPUFAMILY_INTEL_HASWELL:
+      return "Intel Haswell";
+    case CPUFAMILY_INTEL_BROADWELL:
+      return "Intel Broadwell";
+    case CPUFAMILY_INTEL_SKYLAKE:
+      return "Intel Skylake";
+
+    default:
+      return "Unknown";
+  }
+}
+
+// CPUSUBFAMILY_ARM_HP, etc are defined in mach/machine.h
+// in system headers
+const char *GetCPUSubFamilyName(int32_t subfamily)
+{
+  switch(subfamily) {
+    case CPUSUBFAMILY_ARM_HP:
+      return "ARM HP";
+    case CPUSUBFAMILY_ARM_HG:
+      return "ARM HG";
+    case CPUSUBFAMILY_ARM_M:
+      return "ARM M";
+    case CPUSUBFAMILY_ARM_HS:
+      return "ARM HS";
+    case CPUSUBFAMILY_ARM_HC_HD:
+      return "ARM HC HD";
+    case CPUSUBFAMILY_ARM_HA:
+      return "ARM HA";
+    default:
+      return "Unknown";
+  }
+}
+
+const char *GetCPUTypeName(cpu_type_t cputype)
+{
+  switch(cputype) {
+    case CPU_TYPE_ARM:
+      return "ARM";
+    case CPU_TYPE_ARM64:
+      return "ARM64";
+    case CPU_TYPE_ARM64_32:
+      return "ARM64_32"; // wtf?
+    case CPU_TYPE_X86_64:
+      return "x86_64";
+    case CPU_TYPE_X86:
+      return "x86";
+    default:
+      return "Unknown";
+  }
+}
+
+const char *GetCPUSubTypeName(cpu_subtype_t cpusubtype)
+{
+  switch(cpusubtype) {
+    case CPU_SUBTYPE_X86_64_ALL:
+      return "x86-64 (all)";
+    case CPU_SUBTYPE_X86_64_H: { // this is 8 which clashes with CPU_SUBTYPE_ARM_XSCALE
+      if (CPU_SUBTYPE_X86_64_H == CPU_SUBTYPE_ARM_XSCALE) {
+        return "x86-64 Haswell feature subset or ARM XSCALE";
+      }
+      return "x86-64 Haswell feature subset";
+    }
+
+    case CPU_SUBTYPE_ARM_V4T:
+      return "ARM V4T";
+    case CPU_SUBTYPE_ARM_V6:
+      return "ARM V6";
+    case CPU_SUBTYPE_ARM_V5TEJ:
+      return "ARM V5TEJ";
+    case CPU_SUBTYPE_ARM_V7:
+      return "ARM V7";
+    case CPU_SUBTYPE_ARM_V7F:
+      return "ARM V7F";
+    case CPU_SUBTYPE_ARM_V7S:
+      return "ARM V7S";
+    case CPU_SUBTYPE_ARM_V7K:
+      return "ARM V7K";
+    case CPU_SUBTYPE_ARM_V8:
+      return "ARM V8";
+    case CPU_SUBTYPE_ARM_V6M:
+      return "ARM V6M";
+    case CPU_SUBTYPE_ARM_V7M:
+      return "ARM V7M";
+    case CPU_SUBTYPE_ARM_V7EM:
+      return "ARM V7EM";
+    case CPU_SUBTYPE_ARM_V8M:
+      return "ARM V8M";
+
+    case CPU_SUBTYPE_ARM64_ALL:
+      return "ARM64 ALL";
+    case CPU_SUBTYPE_ARM64_V8:
+      return "ARM64 V8";
+    case CPU_SUBTYPE_ARM64E:
+      return "ARM64 64E";
+
+    default:
+      return "Unknown";
+  }
+}
+
+
 // TODO(mudit): Figure out how to report a failed fetch for a name aka
 //              val = FAILED_FETCH in a nice human readable manner
-void PrintSysctlHW(const SysctlHW *const hw)
+void PrintSysctl(const Sysctl *const sysctl)
 {
   printf("Processor:\n");
+  printf("\tName:                %s (64bit = %s)\n",
+         sysctl->machdep.brand_string,sysctl->hw.cpu64bit_capable ? "true" : "false");
+  printf("\tCPU family:          %s (subfamily = %s)\n",
+         GetCPUFamilyName(sysctl->hw.cpufamily), GetCPUSubFamilyName(sysctl->hw.cpusubfamily));
+  printf("\tCPU type:            %s (subtype = %s, threadtype = %d)\n",
+         GetCPUTypeName(sysctl->hw.cputype), GetCPUSubTypeName(sysctl->hw.cpusubtype), sysctl->hw.cputhreadtype);
   printf("\tNumber of packages:  %d\n",
-         hw->packages);
-  printf("\tPhysical cores:      %d (enabled = %d)\n",
-         hw->physicalcpu_max, hw->physicalcpu);
-  printf("\tLogical cores:       %d (enabled = %d)\n",
-         hw->logicalcpu_max, hw->logicalcpu);
+         sysctl->hw.packages);
+  printf("\tPhysical cores:      %d\n",
+         sysctl->machdep.cpu.cores_per_package * sysctl->hw.packages);
+  printf("\tLogical cores:       %d\n",
+         sysctl->machdep.cpu.logical_per_package * sysctl->hw.packages);
+  printf("\tThreads:             %d\n",
+         sysctl->machdep.cpu.thread_count);
 
-  for (int32_t i = 0; i < hw->nperflevels; ++i) {
+  for (int32_t i = 0; i < sysctl->hw.nperflevels; ++i) {
     printf("\tCore type:           %s\n",
-           hw->perflevelN[i].name);
-    printf("\t\tPhysical:       %d (max for this boot = %d)\n",
-           hw->perflevelN[i].physicalcpu, hw->perflevelN[i].physicalcpu_max);
-    printf("\t\tLogical:        %d (max for this boot = %d)\n",
-           hw->perflevelN[i].logicalcpu, hw->perflevelN[i].logicalcpu_max);
+           sysctl->hw.perflevelN[i].name);
+    printf("\t\tPhysical:       %d (available = %d [inactive = %d])\n",
+           sysctl->hw.perflevelN[i].physicalcpu, sysctl->hw.perflevelN[i].physicalcpu_max,
+           (sysctl->hw.perflevelN[i].physicalcpu_max - sysctl->hw.perflevelN[i].physicalcpu));
+    printf("\t\tLogical:        %d (available = %d [inactive = %d])\n",
+           sysctl->hw.perflevelN[i].logicalcpu, sysctl->hw.perflevelN[i].logicalcpu_max,
+           (sysctl->hw.perflevelN[i].logicalcpu_max - sysctl->hw.perflevelN[i].logicalcpu));
     printf("\t\tL1 data cache:  %d bytes\n",
-           hw->perflevelN[i].l1dcachesize);
+           sysctl->hw.perflevelN[i].l1dcachesize);
     printf("\t\tL1 inst cache:  %d bytes\n",
-           hw->perflevelN[i].l1icachesize);
+           sysctl->hw.perflevelN[i].l1icachesize);
     printf("\t\tL2 cache:       %d bytes\n",
-           hw->perflevelN[i].l2cachesize);
+           sysctl->hw.perflevelN[i].l2cachesize);
     printf("\t\tL3 cache:       %d bytes\n",
-           hw->perflevelN[i].l3cachesize);
+           sysctl->hw.perflevelN[i].l3cachesize);
   }
 
-  printf("\tCPU type:            %d (subtype = %d, threadtype = %d)\n",
-         hw->cputype, hw->cpusubtype, hw->cputhreadtype);
   printf("\tByte order:          %s Endian (%d)\n",
-         hw->byteorder == 1234 ? "Little" : "Big", hw->byteorder);
+         sysctl->hw.byteorder == 1234 ? "Little" : "Big", sysctl->hw.byteorder);
 
   printf("Memory:\n");
   printf("\tTotal physical:      %lld GB\n",
-         hw->memsize/(GB(1)));
+         sysctl->hw.memsize/(GB(1)));
   printf("\tCache line size:     %lld bytes\n",
-         hw->cachelinesize);
+         sysctl->hw.cachelinesize);
   printf("\tL1 data cache size:  %lld bytes\n",
-         hw->l1dcachesize);
+         sysctl->hw.l1dcachesize);
   printf("\tL1 inst cache size:  %lld bytes\n",
-         hw->l1icachesize);
+         sysctl->hw.l1icachesize);
   printf("\tL2 cache size:       %lld bytes\n",
-         hw->l2cachesize);
+         sysctl->hw.l2cachesize);
   printf("\tL3 cache size:       %lld bytes\n",
-         hw->l3cachesize);
+         sysctl->hw.l3cachesize);
   printf("\tVirtual addr size:   %d bits (min=%#llx, max=%#llx)\n",
-         hw->machdep.virtual_address_size, (uint64_t)0, (uint64_t)1 << hw->machdep.virtual_address_size);
+         sysctl->machdep.virtual_address_size, (uint64_t)0,
+         (uint64_t)1 << sysctl->machdep.virtual_address_size);
 
 
   printf("OS:\n");
   printf("\tTime base frequency: %lld\n",
-         hw->tbfrequency);
+         sysctl->hw.tbfrequency);
   printf("\tPage size:           %lld KB (%lld bytes)\n",
-         hw->pagesize/(KB(1)), hw->pagesize);
+         sysctl->hw.pagesize/(KB(1)), sysctl->hw.pagesize);
+  printf("\tKernel version:      %s\n",
+         sysctl->kern.version);
 }
 
 int main(void)
 {
-  SysctlHW hw = {0};
-
+  Sysctl sysctl = {0};
 
   /* CPU */
-  GetSystemInfo("hw.packages", &hw.packages);
-  GetSystemInfo("hw.nperflevels", &hw.nperflevels);
-  PerfLevelN perflevelN[hw.nperflevels];
-  hw.perflevelN = perflevelN;
+  GetSystemInfo_("machdep.cpu.brand_string", sysctl.machdep.brand_string, sizeof(sysctl.machdep.brand_string));
+  GetSystemInfo("hw.packages", &sysctl.hw.packages);
+  GetSystemInfo("hw.nperflevels", &sysctl.hw.nperflevels);
 
-  const char *buffers[hw.nperflevels][128];
+  PerfLevelN perflevelN[sysctl.hw.nperflevels];
+  const char *buffers[sysctl.hw.nperflevels][128];
 
-  for (int32_t i = 0; i < hw.nperflevels; ++i) {
-    hw.perflevelN[i].name = (char *)buffers[i];
-    memset(hw.perflevelN[i].name, 0, sizeof(*buffers)/sizeof(**buffers));
+  sysctl.hw.perflevelN = perflevelN;
 
-    GetSystemInfo(FormatStr("hw.perflevel%d.physicalcpu", i), &hw.perflevelN[i].physicalcpu);
-    GetSystemInfo(FormatStr("hw.perflevel%d.physicalcpu_max", i), &hw.perflevelN[i].physicalcpu_max);
-    GetSystemInfo(FormatStr("hw.perflevel%d.logicalcpu", i), &hw.perflevelN[i].logicalcpu);
-    GetSystemInfo(FormatStr("hw.perflevel%d.logicalcpu_max", i), &hw.perflevelN[i].logicalcpu_max);
-    GetSystemInfo(FormatStr("hw.perflevel%d.l1dcachesize", i), &hw.perflevelN[i].l1dcachesize);
-    GetSystemInfo(FormatStr("hw.perflevel%d.l1icachesize", i), &hw.perflevelN[i].l1icachesize);
-    GetSystemInfo(FormatStr("hw.perflevel%d.l2cachesize", i), &hw.perflevelN[i].l2cachesize);
-    GetSystemInfo(FormatStr("hw.perflevel%d.l3cachesize", i), &hw.perflevelN[i].l3cachesize);
-    GetSystemInfo(FormatStr("hw.perflevel%d.cpusperl2", i), &hw.perflevelN[i].cpusperl2);
-    GetSystemInfo(FormatStr("hw.perflevel%d.cpusperl3", i), &hw.perflevelN[i].cpusperl3);
-    GetSystemInfo(FormatStr("hw.perflevel%d.l2perflevels", i), &hw.perflevelN[i].l2perflevels);
-    GetSystemInfo(FormatStr("hw.perflevel%d.l3perflevels", i), &hw.perflevelN[i].l3perflevels);
-    GetSystemInfo_(FormatStr("hw.perflevel%d.name", i), hw.perflevelN[i].name, 128);
+  for (int32_t i = 0; i < sysctl.hw.nperflevels; ++i) {
+    size_t sz = sizeof(*buffers)/sizeof(**buffers);
+
+    sysctl.hw.perflevelN[i].name = (char *)buffers[i];
+    memset(sysctl.hw.perflevelN[i].name, 0, sz);
+
+    GetSystemInfo_(FormatStr("hw.perflevel%d.name", i), sysctl.hw.perflevelN[i].name, sz);
+    GetSystemInfo(FormatStr("hw.perflevel%d.physicalcpu", i), &sysctl.hw.perflevelN[i].physicalcpu);
+    GetSystemInfo(FormatStr("hw.perflevel%d.physicalcpu_max", i), &sysctl.hw.perflevelN[i].physicalcpu_max);
+    GetSystemInfo(FormatStr("hw.perflevel%d.logicalcpu", i), &sysctl.hw.perflevelN[i].logicalcpu);
+    GetSystemInfo(FormatStr("hw.perflevel%d.logicalcpu_max", i), &sysctl.hw.perflevelN[i].logicalcpu_max);
+    GetSystemInfo(FormatStr("hw.perflevel%d.l1dcachesize", i), &sysctl.hw.perflevelN[i].l1dcachesize);
+    GetSystemInfo(FormatStr("hw.perflevel%d.l1icachesize", i), &sysctl.hw.perflevelN[i].l1icachesize);
+    GetSystemInfo(FormatStr("hw.perflevel%d.l2cachesize", i), &sysctl.hw.perflevelN[i].l2cachesize);
+    GetSystemInfo(FormatStr("hw.perflevel%d.l3cachesize", i), &sysctl.hw.perflevelN[i].l3cachesize);
+    GetSystemInfo(FormatStr("hw.perflevel%d.cpusperl2", i), &sysctl.hw.perflevelN[i].cpusperl2);
+    GetSystemInfo(FormatStr("hw.perflevel%d.cpusperl3", i), &sysctl.hw.perflevelN[i].cpusperl3);
+    GetSystemInfo(FormatStr("hw.perflevel%d.l2perflevels", i), &sysctl.hw.perflevelN[i].l2perflevels);
+    GetSystemInfo(FormatStr("hw.perflevel%d.l3perflevels", i), &sysctl.hw.perflevelN[i].l3perflevels);
   }
 
-  GetSystemInfo("hw.physicalcpu_max", &hw.physicalcpu_max);
-  GetSystemInfo("hw.physicalcpu", &hw.physicalcpu);
-  GetSystemInfo("hw.logicalcpu_max", &hw.logicalcpu_max);
-  GetSystemInfo("hw.logicalcpu", &hw.logicalcpu);
-  GetSystemInfo("hw.cputype", &hw.cputype);
-  GetSystemInfo("hw.cpusubtype", &hw.cpusubtype);
-  GetSystemInfo("hw.cputhreadtype", &hw.cputhreadtype);
-  GetSystemInfo("hw.byteorder", &hw.byteorder);
+  GetSystemInfo("machdep.cpu.cores_per_package", &sysctl.machdep.cpu.cores_per_package);
+  GetSystemInfo("machdep.cpu.logical_per_package", &sysctl.machdep.cpu.logical_per_package);
+  GetSystemInfo("machdep.cpu.thread_count", &sysctl.machdep.cpu.thread_count);
+  GetSystemInfo("hw.cputype", &sysctl.hw.cputype);
+  GetSystemInfo("hw.cpusubtype", &sysctl.hw.cpusubtype);
+  GetSystemInfo("hw.cputhreadtype", &sysctl.hw.cputhreadtype);
+  GetSystemInfo("hw.cpufamily", &sysctl.hw.cpufamily);
+  GetSystemInfo("hw.cpusubfamily", &sysctl.hw.cpusubfamily);
+  GetSystemInfo("hw.cpu64bit_capable", &sysctl.hw.cpu64bit_capable);
+  GetSystemInfo("hw.byteorder", &sysctl.hw.byteorder);
 
   /* Memory */
-  GetSystemInfo("hw.memsize", &hw.memsize);
-  GetSystemInfo("hw.cachelinesize", &hw.cachelinesize);
-  GetSystemInfo("hw.l1dcachesize", &hw.l1dcachesize);
-  GetSystemInfo("hw.l1icachesize", &hw.l1icachesize);
-  GetSystemInfo("hw.l2cachesize", &hw.l2cachesize);
-  GetSystemInfo("hw.l3cachesize", &hw.l3cachesize);
-  GetSystemInfo("machdep.virtual_address_size", &hw.machdep.virtual_address_size);
+  GetSystemInfo("hw.memsize", &sysctl.hw.memsize);
+  GetSystemInfo("hw.cachelinesize", &sysctl.hw.cachelinesize);
+  GetSystemInfo("hw.l1dcachesize", &sysctl.hw.l1dcachesize);
+  GetSystemInfo("hw.l1icachesize", &sysctl.hw.l1icachesize);
+  GetSystemInfo("hw.l2cachesize", &sysctl.hw.l2cachesize);
+  GetSystemInfo("hw.l3cachesize", &sysctl.hw.l3cachesize);
+  GetSystemInfo("machdep.virtual_address_size", &sysctl.machdep.virtual_address_size);
 
   /* OS */
-  GetSystemInfo("hw.tbfrequency", &hw.tbfrequency);
-  GetSystemInfo("hw.pagesize", &hw.pagesize);
+  GetSystemInfo("hw.tbfrequency", &sysctl.hw.tbfrequency);
+  GetSystemInfo("hw.pagesize", &sysctl.hw.pagesize);
+  GetSystemInfo_("kern.version", sysctl.kern.version, sizeof(sysctl.kern.version));
 
-  PrintSysctlHW(&hw);
+  PrintSysctl(&sysctl);
 
   // TODO(mudit): Print sizes of all old style built in C types
 
