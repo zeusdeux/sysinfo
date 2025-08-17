@@ -14,10 +14,10 @@ ensure:
 	mkdir -p $(BUILD_DIR)
 
 debug: ensure $(SOURCES)
-	$(CC) $(CFLAGS) $(DEBUG_FLAGS) $(SOURCES) -o $(BUILD_DIR)/main-dbg
+	$(CC) $(CFLAGS) $(DEBUG_FLAGS) $(SOURCES) -o $(BUILD_DIR)/sysinfo-dbg
 
 release: ensure $(SOURCES)
-	$(CC) $(CFLAGS) $(RELEASE_FLAGS) $(SOURCES) -o $(BUILD_DIR)/main-release
+	$(CC) $(CFLAGS) $(RELEASE_FLAGS) $(SOURCES) -o $(BUILD_DIR)/sysinfo
 
 clean:
 	rm -fr $(BUILD_DIR)
