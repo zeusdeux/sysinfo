@@ -1,4 +1,4 @@
-CC=clang
+CC ?= clang
 
 MACOS_VERSION = $(shell sw_vers -productVersion | cut -c1-4)
 X86_64_TRIPLE = x86_64-apple-macos$(MACOS_VERSION)
