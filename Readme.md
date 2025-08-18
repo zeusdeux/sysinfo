@@ -30,26 +30,28 @@ Processor:
 	Logical cores:       8
 	Threads:             8
 	Core type:           Performance
-		Physical:       4 (available = 4 [inactive = 0])
-		Logical:        4 (available = 4 [inactive = 0])
-		L1 data cache:  128 KB (131072 bytes)
-		L1 inst cache:  192 KB (196608 bytes)
-		L2 cache:       12 MB (12582912 bytes)
+		  Physical:       4 (available = 4 [inactive = 0])
+		  Logical:        4 (available = 4 [inactive = 0])
+		  L1 data cache:  128 KB (131072 bytes)
+		  L1 inst cache:  192 KB (196608 bytes)
+		  L2 cache:       12 MB (12582912 bytes)
 	Core type:           Efficiency
-		Physical:       4 (available = 4 [inactive = 0])
-		Logical:        4 (available = 4 [inactive = 0])
-		L1 data cache:  64 KB (65536 bytes)
-		L1 inst cache:  128 KB (131072 bytes)
-		L2 cache:       4 MB (4194304 bytes)
+		  Physical:       4 (available = 4 [inactive = 0])
+		  Logical:        4 (available = 4 [inactive = 0])
+		  L1 data cache:  64 KB (65536 bytes)
+		  L1 inst cache:  128 KB (131072 bytes)
+		  L2 cache:       4 MB (4194304 bytes)
 	Byte order:          Little Endian (1234)
+
 Memory:
 	Total physical:      16 GB
 	Virtual addr size:   47 bits (user space = 0 to 0x00007fffffffffff)
 	Cache as seen by current process:
-		Max cache line: 128 bytes (but is probably 64 KB)
-		L1 data cache:  64 KB (65536 bytes)
-		L1 inst cache:  128 KB (131072 bytes)
-		L2 cache:       4 MB (4194304 bytes)
+		  Max cache line: 128 bytes (but is probably 64 KB)
+		  L1 data cache:  64 KB (65536 bytes)
+		  L1 inst cache:  128 KB (131072 bytes)
+		  L2 cache:       4 MB (4194304 bytes)
+
 OS:
 	Time base frequency: 24000000
 	Page size:           16 KB (16384 bytes)
@@ -69,20 +71,22 @@ Processor:
 	Logical cores:       8
 	Threads:             8
 	Core type:           Performance
-		Physical:       4 (available = 4 [inactive = 0])
-		Logical:        4 (available = 4 [inactive = 0])
-		L1 data cache:  128 KB (131072 bytes)
-		L1 inst cache:  192 KB (196608 bytes)
-		L2 cache:       12 MB (12582912 bytes)
+		  Physical:       4 (available = 4 [inactive = 0])
+		  Logical:        4 (available = 4 [inactive = 0])
+		  L1 data cache:  128 KB (131072 bytes)
+		  L1 inst cache:  192 KB (196608 bytes)
+		  L2 cache:       12 MB (12582912 bytes)
 	Byte order:          Little Endian (1234)
+
 Memory:
 	Total physical:      16 GB
 	Virtual addr size:   47 bits (user space = 0 to 0x00007fffffffffff)
 	Cache as seen by current process:
-		Max cache line: 64 bytes (but is probably 64 KB)
-		L1 data cache:  64 KB (65536 bytes)
-		L1 inst cache:  128 KB (131072 bytes)
-		L2 cache:       4 MB (4194304 bytes)
+		  Max cache line: 64 bytes
+		  L1 data cache:  64 KB (65536 bytes)
+		  L1 inst cache:  128 KB (131072 bytes)
+		  L2 cache:       4 MB (4194304 bytes)
+
 OS:
 	Time base frequency: 24000000
 	Page size:           4 KB (4096 bytes)
