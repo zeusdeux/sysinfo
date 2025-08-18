@@ -22,6 +22,7 @@ typedef struct {
 
 typedef struct {
   char version[128];
+  int32_t stack_size;
 } Kern;
 
 typedef struct {
@@ -326,6 +327,8 @@ void PrintSysctl(const Sysctl *const sysctl)
          sysctl->hw.tbfrequency);
   printf("\tPage size:           %lld KB (%lld bytes)\n",
          sysctl->hw.pagesize/(KB(1)), sysctl->hw.pagesize);
+  printf("\tStack size:          %d KB (%d bytes)\n",
+         sysctl->kern.stack_size/(KB(1)), sysctl->kern.stack_size);
   printf("\tKernel version:      %s\n",
          sysctl->kern.version);
 }
@@ -388,6 +391,7 @@ int main(void)
   /* OS */
   GetSystemInfo("hw.tbfrequency", &sysctl.hw.tbfrequency);
   GetSystemInfo("hw.pagesize", &sysctl.hw.pagesize);
+  GetSystemInfo("kern.stack_size", &sysctl.kern.stack_size);
   GetSystemInfo_("kern.version", sysctl.kern.version, sizeof(sysctl.kern.version));
 
   PrintSysctl(&sysctl);
