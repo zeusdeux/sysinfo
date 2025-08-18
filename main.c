@@ -261,14 +261,15 @@ const char *GetCPUSubTypeName(cpu_subtype_t cpusubtype)
   }
 }
 
+// NOTES: The int64_t is to make char* comparable with a sentinel. And
+// in all usecases of this macro, it is a safe upcast so we are good.
+#define MAYBE(var, rest) if ((var) != FAILED_FETCH) rest
 
-// TODO(mudit): Figure out how to report a failed fetch for a name aka
-//              val = FAILED_FETCH in a nice human readable manner
 void PrintSysctl(const Sysctl *const sysctl)
 {
   printf("Processor:\n");
   printf("\tName:                %s (64bit = %s)\n",
-         sysctl->machdep.brand_string,sysctl->hw.cpu64bit_capable ? "true" : "false");
+         sysctl->machdep.brand_string, sysctl->hw.cpu64bit_capable ? "true" : "false");
   printf("\tCPU family:          %s (subfamily = %s)\n",
          GetCPUFamilyName(sysctl->hw.cpufamily), GetCPUSubFamilyName(sysctl->hw.cpusubfamily));
   printf("\tCPU type:            %s (subtype = %s%s)\n",
@@ -286,29 +287,41 @@ void PrintSysctl(const Sysctl *const sysctl)
   printf("\tThreads:             %d\n",
          sysctl->machdep.cpu.thread_count);
 
+  // NOTES: Not all these values are present hence the MAYBE macro
+  // usage For e.g., try dummying out the MAYBE macro and then invoke:
+  // arch -x86_64 ./.build/sysinfo
   for (int32_t i = 0; i < sysctl->hw.nperflevels; ++i) {
-    printf("\tCore type:           %s\n",
-           sysctl->hw.perflevelN[i].name);
-    printf("\t\tPhysical:       %d (available = %d [inactive = %d])\n",
-           sysctl->hw.perflevelN[i].physicalcpu, sysctl->hw.perflevelN[i].physicalcpu_max,
-           (sysctl->hw.perflevelN[i].physicalcpu_max - sysctl->hw.perflevelN[i].physicalcpu));
-    printf("\t\tLogical:        %d (available = %d [inactive = %d])\n",
-           sysctl->hw.perflevelN[i].logicalcpu, sysctl->hw.perflevelN[i].logicalcpu_max,
-           (sysctl->hw.perflevelN[i].logicalcpu_max - sysctl->hw.perflevelN[i].logicalcpu));
-    printf("\t\tL1 data cache:  %d KB (%d bytes)\n",
-           sysctl->hw.perflevelN[i].l1dcachesize/(KB(1)), sysctl->hw.perflevelN[i].l1dcachesize);
-    printf("\t\tL1 inst cache:  %d KB (%d bytes)\n",
-           sysctl->hw.perflevelN[i].l1icachesize/(KB(1)), sysctl->hw.perflevelN[i].l1icachesize);
-    printf("\t\tL2 cache:       %d MB (%d bytes)\n",
-           sysctl->hw.perflevelN[i].l2cachesize/(MB(1)), sysctl->hw.perflevelN[i].l2cachesize);
-
-    if (sysctl->hw.perflevelN[i].l3cachesize != FAILED_FETCH) {
-      printf("\t\tL3 cache:       %d bytes\n",
-             sysctl->hw.perflevelN[i].l3cachesize);
+    if (strcmp(sysctl->hw.perflevelN[i].name, "") != 0) {
+      printf("\tCore type:           %s\n", sysctl->hw.perflevelN[i].name);
     }
+    MAYBE(sysctl->hw.perflevelN[i].physicalcpu,
+          printf("\t\tPhysical:       %d (available = %d [inactive = %d])\n",
+                 sysctl->hw.perflevelN[i].physicalcpu, sysctl->hw.perflevelN[i].physicalcpu_max,
+                 (sysctl->hw.perflevelN[i].physicalcpu_max - sysctl->hw.perflevelN[i].physicalcpu)));
+    MAYBE(sysctl->hw.perflevelN[i].logicalcpu,
+          printf("\t\tLogical:        %d (available = %d [inactive = %d])\n",
+                 sysctl->hw.perflevelN[i].logicalcpu,
+                 sysctl->hw.perflevelN[i].logicalcpu_max,
+                 (sysctl->hw.perflevelN[i].logicalcpu_max - sysctl->hw.perflevelN[i].logicalcpu)));
+    MAYBE(sysctl->hw.perflevelN[i].l1dcachesize,
+          printf("\t\tL1 data cache:  %d KB (%d bytes)\n",
+                 sysctl->hw.perflevelN[i].l1dcachesize/(KB(1)),
+                 sysctl->hw.perflevelN[i].l1dcachesize));
+    MAYBE(sysctl->hw.perflevelN[i].l1icachesize,
+          printf("\t\tL1 inst cache:  %d KB (%d bytes)\n",
+                 sysctl->hw.perflevelN[i].l1icachesize/(KB(1)),
+                 sysctl->hw.perflevelN[i].l1icachesize));
+    MAYBE(sysctl->hw.perflevelN[i].l2cachesize,
+          printf("\t\tL2 cache:       %d MB (%d bytes)\n",
+                 sysctl->hw.perflevelN[i].l2cachesize/(MB(1)),
+                 sysctl->hw.perflevelN[i].l2cachesize));
+    MAYBE(sysctl->hw.perflevelN[i].l3cachesize,
+          printf("\t\tL3 cache:       %d bytes\n",
+                 sysctl->hw.perflevelN[i].l3cachesize));
   }
   printf("\tByte order:          %s Endian (%d)\n",
          sysctl->hw.byteorder == 1234 ? "Little" : "Big", sysctl->hw.byteorder);
+
 
   printf("Memory:\n");
   printf("\tTotal physical:      %lld GB\n",
