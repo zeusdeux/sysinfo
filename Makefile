@@ -33,6 +33,6 @@ clean:
 	rm -fr $(BUILD_DIR)
 
 dump: debug
-	objdump -Sds $(BUILD_DIR)/main-dbg
+	objdump -Sds $(BUILD_DIR)/sysinfo-dbg
 
 .PHONY: all ensure debug release clean dump
