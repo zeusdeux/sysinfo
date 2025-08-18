@@ -2,7 +2,21 @@
 
 A small tool to print system information on Apple machines.
 
-You can grab a copy of the universal binary from the [Releases](https://github.com/zeusdeux/sysinfo/releases).
+## Quick start
+
+```sh
+git clone git@github.com:zeusdeux/sysinfo.git
+# OR
+git clone https://github.com/zeusdeux/sysinfo.git
+
+cd sysinfo
+make -B
+./.build/sysinfo
+```
+
+You can then symlink `sysinfo` from a folder in your `$PATH` to `<path
+to sysinfo repo clone>/.build/sysinfo` or add `<path to sysinfo repo
+clone>/.build/sysinfo` to your `$PATH`.
 
 Example output on Apple Silicon:
 
