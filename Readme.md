@@ -47,7 +47,7 @@ Memory:
 	Total physical:      16 GB
 	Virtual addr size:   47 bits (user space = 0 to 0x00007fffffffffff)
 	Cache as seen by current process:
-		  Max cache line: 128 bytes (but is probably 64 KB)
+		  Max cache line: 128 bytes (cache line is probably 64 KB)
 		  L1 data cache:  64 KB (65536 bytes)
 		  L1 inst cache:  128 KB (131072 bytes)
 		  L2 cache:       4 MB (4194304 bytes)
