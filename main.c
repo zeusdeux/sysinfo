@@ -323,7 +323,7 @@ void PrintSysctl(const Sysctl *const sysctl)
          sysctl->hw.byteorder == 1234 ? "Little" : "Big", sysctl->hw.byteorder);
 
 
-  printf("Memory:\n");
+  printf("\nMemory:\n");
   printf("\tTotal physical:      %lld GB\n",
          sysctl->hw.memsize/(GB(1)));
   printf("\tVirtual addr size:   %d bits (user space = %#llx to %#018llx)\n",
@@ -345,7 +345,7 @@ void PrintSysctl(const Sysctl *const sysctl)
   }
 
 
-  printf("OS:\n");
+  printf("\nOS:\n");
   printf("\tTime base frequency: %lld\n",
          sysctl->hw.tbfrequency);
   printf("\tPage size:           %lld KB (%lld bytes)\n",
