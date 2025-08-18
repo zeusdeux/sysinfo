@@ -271,8 +271,12 @@ void PrintSysctl(const Sysctl *const sysctl)
          sysctl->machdep.brand_string,sysctl->hw.cpu64bit_capable ? "true" : "false");
   printf("\tCPU family:          %s (subfamily = %s)\n",
          GetCPUFamilyName(sysctl->hw.cpufamily), GetCPUSubFamilyName(sysctl->hw.cpusubfamily));
-  printf("\tCPU type:            %s (subtype = %s, threadtype = %d)\n",
-         GetCPUTypeName(sysctl->hw.cputype), GetCPUSubTypeName(sysctl->hw.cpusubtype), sysctl->hw.cputhreadtype);
+  printf("\tCPU type:            %s (subtype = %s%s)\n",
+         GetCPUTypeName(sysctl->hw.cputype),
+         GetCPUSubTypeName(sysctl->hw.cpusubtype),
+         sysctl->hw.cputhreadtype != FAILED_FETCH
+           ? FormatStr(", threadtype = %d", sysctl->hw.cputhreadtype)
+           : "");
   printf("\tNumber of packages:  %d\n",
          sysctl->hw.packages);
   printf("\tPhysical cores:      %d\n",
@@ -291,35 +295,41 @@ void PrintSysctl(const Sysctl *const sysctl)
     printf("\t\tLogical:        %d (available = %d [inactive = %d])\n",
            sysctl->hw.perflevelN[i].logicalcpu, sysctl->hw.perflevelN[i].logicalcpu_max,
            (sysctl->hw.perflevelN[i].logicalcpu_max - sysctl->hw.perflevelN[i].logicalcpu));
-    printf("\t\tL1 data cache:  %d bytes\n",
-           sysctl->hw.perflevelN[i].l1dcachesize);
-    printf("\t\tL1 inst cache:  %d bytes\n",
-           sysctl->hw.perflevelN[i].l1icachesize);
-    printf("\t\tL2 cache:       %d bytes\n",
-           sysctl->hw.perflevelN[i].l2cachesize);
-    printf("\t\tL3 cache:       %d bytes\n",
-           sysctl->hw.perflevelN[i].l3cachesize);
-  }
+    printf("\t\tL1 data cache:  %d KB (%d bytes)\n",
+           sysctl->hw.perflevelN[i].l1dcachesize/(KB(1)), sysctl->hw.perflevelN[i].l1dcachesize);
+    printf("\t\tL1 inst cache:  %d KB (%d bytes)\n",
+           sysctl->hw.perflevelN[i].l1icachesize/(KB(1)), sysctl->hw.perflevelN[i].l1icachesize);
+    printf("\t\tL2 cache:       %d MB (%d bytes)\n",
+           sysctl->hw.perflevelN[i].l2cachesize/(MB(1)), sysctl->hw.perflevelN[i].l2cachesize);
 
+    if (sysctl->hw.perflevelN[i].l3cachesize != FAILED_FETCH) {
+      printf("\t\tL3 cache:       %d bytes\n",
+             sysctl->hw.perflevelN[i].l3cachesize);
+    }
+  }
   printf("\tByte order:          %s Endian (%d)\n",
          sysctl->hw.byteorder == 1234 ? "Little" : "Big", sysctl->hw.byteorder);
 
   printf("Memory:\n");
   printf("\tTotal physical:      %lld GB\n",
          sysctl->hw.memsize/(GB(1)));
-  printf("\tCache line size:     %lld bytes\n",
-         sysctl->hw.cachelinesize);
-  printf("\tL1 data cache size:  %lld bytes\n",
-         sysctl->hw.l1dcachesize);
-  printf("\tL1 inst cache size:  %lld bytes\n",
-         sysctl->hw.l1icachesize);
-  printf("\tL2 cache size:       %lld bytes\n",
-         sysctl->hw.l2cachesize);
-  printf("\tL3 cache size:       %lld bytes\n",
-         sysctl->hw.l3cachesize);
   printf("\tVirtual addr size:   %d bits (user space = %#llx to %#018llx)\n",
          sysctl->machdep.virtual_address_size, (uint64_t)0,
          ((uint64_t)1 << sysctl->machdep.virtual_address_size) - 1);
+  printf("\tCache as seen by current process:\n");
+  printf("\t\tMax cache line: %lld bytes (but is probably 64 KB)\n",
+         sysctl->hw.cachelinesize);
+  printf("\t\tL1 data cache:  %lld KB (%lld bytes)\n",
+         sysctl->hw.l1dcachesize/(KB(1)), sysctl->hw.l1dcachesize);
+  printf("\t\tL1 inst cache:  %lld KB (%lld bytes)\n",
+         sysctl->hw.l1icachesize/(KB(1)), sysctl->hw.l1icachesize);
+  printf("\t\tL2 cache:       %lld MB (%lld bytes)\n",
+         sysctl->hw.l2cachesize/(MB(1)), sysctl->hw.l2cachesize);
+
+  if (sysctl->hw.l3cachesize != FAILED_FETCH) {
+    printf("\tL3 cache size:       %lld KB (%lld bytes)\n",
+           sysctl->hw.l3cachesize/(KB(1)), sysctl->hw.l3cachesize);
+  }
 
 
   printf("OS:\n");
