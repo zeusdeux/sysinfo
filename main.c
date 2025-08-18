@@ -330,8 +330,8 @@ void PrintSysctl(const Sysctl *const sysctl)
          sysctl->machdep.virtual_address_size, (uint64_t)0,
          ((uint64_t)1 << sysctl->machdep.virtual_address_size) - 1);
   printf("\tCache as seen by current process:\n");
-  printf("\t\tMax cache line: %lld bytes (but is probably 64 KB)\n",
-         sysctl->hw.cachelinesize);
+  printf("\t\tMax cache line: %lld bytes%s\n",
+         sysctl->hw.cachelinesize, sysctl->hw.cachelinesize > 64 ? " (but is probably 64 KB)" : "");
   printf("\t\tL1 data cache:  %lld KB (%lld bytes)\n",
          sysctl->hw.l1dcachesize/(KB(1)), sysctl->hw.l1dcachesize);
   printf("\t\tL1 inst cache:  %lld KB (%lld bytes)\n",
