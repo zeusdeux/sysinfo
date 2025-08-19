@@ -222,7 +222,9 @@ const char *GetCPUSubTypeName(cpu_subtype_t cpusubtype)
         return "x86-64 Haswell feature subset or ARM XSCALE";
       }
       return "x86-64 Haswell feature subset";
-    }
+    };
+    case CPU_SUBTYPE_X86_ARCH1:
+      return "x86-arch1";
 
     case CPU_SUBTYPE_ARM_V4T:
       return "ARM V4T";
@@ -261,8 +263,6 @@ const char *GetCPUSubTypeName(cpu_subtype_t cpusubtype)
   }
 }
 
-// NOTES: The int64_t is to make char* comparable with a sentinel. And
-// in all usecases of this macro, it is a safe upcast so we are good.
 #define MAYBE(var, rest) if ((var) != FAILED_FETCH) rest
 
 void PrintSysctl(const Sysctl *const sysctl)
@@ -312,12 +312,19 @@ void PrintSysctl(const Sysctl *const sysctl)
                  sysctl->hw.perflevelN[i].l1icachesize/(KB(1)),
                  sysctl->hw.perflevelN[i].l1icachesize));
     MAYBE(sysctl->hw.perflevelN[i].l2cachesize,
-          printf("\t\tL2 cache:       %d MB (%d bytes)\n",
+          printf("\t\tL2 cache:       %d MB (%d bytes%s)\n",
                  sysctl->hw.perflevelN[i].l2cachesize/(MB(1)),
-                 sysctl->hw.perflevelN[i].l2cachesize));
+                 sysctl->hw.perflevelN[i].l2cachesize,
+                 sysctl->hw.perflevelN[i].cpusperl2 != FAILED_FETCH
+                   ? FormatStr(", shared by %d CPUs", sysctl->hw.perflevelN[i].cpusperl2)
+                   : ""));
     MAYBE(sysctl->hw.perflevelN[i].l3cachesize,
-          printf("\t\tL3 cache:       %d bytes\n",
-                 sysctl->hw.perflevelN[i].l3cachesize));
+          printf("\t\tL3 cache:       %d MB (%d bytes%s)\n",
+                 sysctl->hw.perflevelN[i].l3cachesize/(MB(1)),
+                 sysctl->hw.perflevelN[i].l3cachesize,
+                 sysctl->hw.perflevelN[i].cpusperl3 != FAILED_FETCH
+                   ? FormatStr(", shared by %d CPUs", sysctl->hw.perflevelN[i].cpusperl3)
+                   : ""));
   }
   printf("\tByte order:          %s Endian (%d)\n",
          sysctl->hw.byteorder == 1234 ? "Little" : "Big", sysctl->hw.byteorder);
@@ -326,8 +333,8 @@ void PrintSysctl(const Sysctl *const sysctl)
   printf("\nMemory:\n");
   printf("\tTotal physical:      %lld GB\n",
          sysctl->hw.memsize/(GB(1)));
-  printf("\tVirtual addr size:   %d bits (user space = %#llx to %#018llx)\n",
-         sysctl->machdep.virtual_address_size, (uint64_t)0,
+  printf("\tVirtual addr size:   %d bits (user space = 0x%#x to %#018llx)\n",
+         sysctl->machdep.virtual_address_size, 0,
          ((uint64_t)1 << sysctl->machdep.virtual_address_size) - 1);
   printf("\tCache as seen by current process:\n");
   printf("\t\tMax cache line: %lld bytes%s\n",
@@ -338,11 +345,9 @@ void PrintSysctl(const Sysctl *const sysctl)
          sysctl->hw.l1icachesize/(KB(1)), sysctl->hw.l1icachesize);
   printf("\t\tL2 cache:       %lld MB (%lld bytes)\n",
          sysctl->hw.l2cachesize/(MB(1)), sysctl->hw.l2cachesize);
-
-  if (sysctl->hw.l3cachesize != FAILED_FETCH) {
-    printf("\tL3 cache size:       %lld KB (%lld bytes)\n",
-           sysctl->hw.l3cachesize/(KB(1)), sysctl->hw.l3cachesize);
-  }
+  MAYBE(sysctl->hw.l3cachesize,
+        printf("\tL3 cache size:       %lld KB (%lld bytes)\n",
+               sysctl->hw.l3cachesize/(KB(1)), sysctl->hw.l3cachesize));
 
 
   printf("\nOS:\n");

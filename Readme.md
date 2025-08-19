@@ -34,13 +34,13 @@ Processor:
 		  Logical:        4 (available = 4 [inactive = 0])
 		  L1 data cache:  128 KB (131072 bytes)
 		  L1 inst cache:  192 KB (196608 bytes)
-		  L2 cache:       12 MB (12582912 bytes)
+		  L2 cache:       12 MB (12582912 bytes, shared by 4 CPUs)
 	Core type:           Efficiency
 		  Physical:       4 (available = 4 [inactive = 0])
 		  Logical:        4 (available = 4 [inactive = 0])
 		  L1 data cache:  64 KB (65536 bytes)
 		  L1 inst cache:  128 KB (131072 bytes)
-		  L2 cache:       4 MB (4194304 bytes)
+		  L2 cache:       4 MB (4194304 bytes, shared by 4 CPUs)
 	Byte order:          Little Endian (1234)
 
 Memory:
@@ -60,6 +60,8 @@ OS:
 ```
 
 Example output on Rosetta:
+
+> NOTE: Cores don't match up as Rosetta is an x86_64 emulation on apple silicon
 
 ```
 Processor:
