@@ -4,6 +4,17 @@ A small tool to print system information on Apple machines.
 
 ## Quick start
 
+```
+curl -L https://github.com/zeusdeux/sysinfo/releases/download/v1.0.1/sysinfo -o ./sysinfo
+chmod +x ./sysinfo
+./sysinfo
+```
+
+> Using `curl` to download from releases to get rid of the quarantine bit that gets set
+> when downloading via a browser.
+
+### Build locally
+
 ```sh
 git clone git@github.com:zeusdeux/sysinfo.git
 # OR
