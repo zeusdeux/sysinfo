@@ -8,6 +8,7 @@
 #include <sys/types.h>
 #include <sys/sysctl.h>
 #include <mach/machine.h>
+#include <CoreGraphics/CoreGraphics.h>
 
 
 typedef struct {
@@ -365,6 +366,67 @@ void PrintSysctl(const Sysctl *const sysctl)
          sysctl->kern.version);
 }
 
+// NOTES: Display data is received from Quartz Display Services made
+// available by -framework CoreGraphics.
+// DOCS:
+// https://developer.apple.com/documentation/coregraphics/quartz-display-services
+void PrintOnlineDisplaysInfo(void)
+{
+  uint32_t maxDisplaysCount   = 10; // should suffice for most cases
+  uint32_t onlineDisplayCount = 0;
+
+  // NOTES: Ignoring any errors here as the purpose of this call is to
+  // only hydrate onlineDiplayCount var. If the framebuffer hardware
+  // is connected, a display is considered connected or online.
+  CGGetOnlineDisplayList(maxDisplaysCount, NULL, &onlineDisplayCount);
+  // NOTES: at max can be 10 so VLA is fine
+  uint32_t onlineDisplays[onlineDisplayCount];
+
+  // CGError enum is defined in:
+  // /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks/CoreGraphics.framework/Headers/CGError.h
+  CGError cgError = CGGetOnlineDisplayList(maxDisplaysCount, onlineDisplays, &onlineDisplayCount);
+  uint32_t mainDisplayId = CGMainDisplayID();
+
+  if (cgError == kCGErrorSuccess && onlineDisplayCount > 0) {
+    printf("\nOnline Displays:\n");
+
+    for (size_t i = 0; i < onlineDisplayCount; i++) {
+      uint32_t displayId           = onlineDisplays[i];
+      bool displayActive           = CGDisplayIsActive(displayId);
+      bool displayAsleep           = CGDisplayIsAsleep(displayId);
+      bool displayBuiltin          = CGDisplayIsBuiltin(displayId);
+      uint32_t displayModelNumber  = CGDisplayModelNumber(displayId);
+      uint32_t displaySerialNumber = CGDisplaySerialNumber(displayId);
+      uint32_t displayVendorNumber = CGDisplayVendorNumber(displayId);
+      CGSize displayScreenSize     = CGDisplayScreenSize(displayId);
+      int32_t displayPixelsHigh    = CGDisplayPixelsHigh(displayId);
+      int32_t displayPixelsWide    = CGDisplayPixelsWide(displayId);
+      CGDisplayModeRef displayMode = CGDisplayCopyDisplayMode(displayId);
+      double refreshRate           = CGDisplayModeGetRefreshRate(displayMode);
+
+      printf("\tDisplay ID: %d%s\n", displayId,
+             displayId == mainDisplayId ? " (main display)" : "");
+      printf("\t\tCurrent res:  %dpx x %dpx\n", displayPixelsWide, displayPixelsHigh);
+
+      if (displayMode) {
+        printf("\t\tRefresh rate: %.1fhz\n", refreshRate);
+      }
+
+      printf("\t\tSize:         %0.2fmm x %0.2fmm\n",
+             displayScreenSize.width, displayScreenSize.height);
+      printf("\t\tBuiltin:      %s\n", displayBuiltin ? "true" : "false");
+      printf("\t\tActive:       %s\n", displayActive ? "true" : "false");
+      printf("\t\tAsleep:       %s\n", displayAsleep ? "true" : "false");
+      printf("\t\tModel:        %u%s\n", displayModelNumber,
+             displayModelNumber == kDisplayProductIDGeneric ? "(generic model number)" : "");
+      printf("\t\tSerial:       %u%s\n", displaySerialNumber,
+             displaySerialNumber == 0x0 ? "(unknown)" : "");
+      printf("\t\tVendor no:    %u%s\n", displayVendorNumber,
+             displayVendorNumber == kDisplayVendorIDUnknown ? "(unknown)" : "");
+    }
+  }
+}
+
 int main(void)
 {
   Sysctl sysctl = {0};
@@ -429,7 +491,8 @@ int main(void)
 
   PrintSysctl(&sysctl);
 
-  // TODO(mudit): Print sizes of all old style built in C types
+  /* Displays */
+  PrintOnlineDisplaysInfo();
 
   return 0;
 }

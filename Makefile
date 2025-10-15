@@ -5,6 +5,7 @@ X86_64_TRIPLE = x86_64-apple-macos$(MACOS_VERSION)
 
 INCLUDES=-I./
 CFLAGS=-std=c17 -Wall -Wdeprecated -Werror -Wextra -Wpedantic -pedantic \
+	-framework CoreGraphics \
 	$(INCLUDES)
 
 RELEASE_FLAGS=-DNDEBUG -O3

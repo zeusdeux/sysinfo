@@ -30,36 +30,50 @@ Processor:
 	Logical cores:       8
 	Threads:             8
 	Core type:           Performance
-		  Physical:       4 (available = 4 [inactive = 0])
-		  Logical:        4 (available = 4 [inactive = 0])
-		  L1 data cache:  128 KB (131072 bytes)
-		  L1 inst cache:  192 KB (196608 bytes)
-		  L2 cache:       12 MB (12582912 bytes, shared by 4 CPUs)
+		Physical:       4 (available = 4 [inactive = 0])
+		Logical:        4 (available = 4 [inactive = 0])
+		L1 data cache:  128 KB (131072 bytes)
+		L1 inst cache:  192 KB (196608 bytes)
+		L2 cache:       12 MB (12582912 bytes, shared by 4 CPUs)
 	Core type:           Efficiency
-		  Physical:       4 (available = 4 [inactive = 0])
-		  Logical:        4 (available = 4 [inactive = 0])
-		  L1 data cache:  64 KB (65536 bytes)
-		  L1 inst cache:  128 KB (131072 bytes)
-		  L2 cache:       4 MB (4194304 bytes, shared by 4 CPUs)
+		Physical:       4 (available = 4 [inactive = 0])
+		Logical:        4 (available = 4 [inactive = 0])
+		L1 data cache:  64 KB (65536 bytes)
+		L1 inst cache:  128 KB (131072 bytes)
+		L2 cache:       4 MB (4194304 bytes, shared by 4 CPUs)
 	Byte order:          Little Endian (1234)
 
 Memory:
 	Total physical:      16 GB
-	Virtual addr size:   47 bits (user space = 0 to 0x00007fffffffffff)
+	Virtual addr size:   47 bits (user space = 0x0 to 0x00007fffffffffff)
 	Cache as seen by current process:
-		  Max cache line: 128 bytes (cache line is probably 64 KB)
-		  L1 data cache:  64 KB (65536 bytes)
-		  L1 inst cache:  128 KB (131072 bytes)
-		  L2 cache:       4 MB (4194304 bytes)
+		Max cache line: 128 bytes (cache line is probably 64 KB)
+		L1 data cache:  64 KB (65536 bytes)
+		L1 inst cache:  128 KB (131072 bytes)
+		L2 cache:       4 MB (4194304 bytes)
 
 OS:
+	Version:             14.7.6
 	Time base frequency: 24000000
 	Page size:           16 KB (16384 bytes)
 	Stack size:          16 KB (16384 bytes)
 	Kernel version:      <BIG KERNEL VERSION STRING>
+
+Online Displays:
+	Display ID: 1 (main display)
+		Current res:  1680px x 1050px
+		Refresh rate: 60.0hz
+		Size:         286.39mm x 178.99mm
+		Builtin:      true
+		Active:       true
+		Asleep:       false
+		Model:        xxxxx
+		Serial:       yyyyyyyyyy
+		Vendor no:    zzzz
+
 ```
 
-Example output on Rosetta:
+Example output on Rosetta (`arch -x86_64 sysinfo`):
 
 > NOTE: Cores don't match up as Rosetta is an x86_64 emulation on apple silicon
 
@@ -67,31 +81,44 @@ Example output on Rosetta:
 Processor:
 	Name:                Apple M1 (64bit = true)
 	CPU family:          Intel Westmere (subfamily = Unknown)
-	CPU type:            x86 (subtype = Unknown)
+	CPU type:            x86 (subtype = x86-arch1)
 	Number of packages:  1
 	Physical cores:      8
 	Logical cores:       8
 	Threads:             8
 	Core type:           Performance
-		  Physical:       4 (available = 4 [inactive = 0])
-		  Logical:        4 (available = 4 [inactive = 0])
-		  L1 data cache:  128 KB (131072 bytes)
-		  L1 inst cache:  192 KB (196608 bytes)
-		  L2 cache:       12 MB (12582912 bytes)
+		Physical:       4 (available = 4 [inactive = 0])
+		Logical:        4 (available = 4 [inactive = 0])
+		L1 data cache:  128 KB (131072 bytes)
+		L1 inst cache:  192 KB (196608 bytes)
+		L2 cache:       12 MB (12582912 bytes)
 	Byte order:          Little Endian (1234)
 
 Memory:
 	Total physical:      16 GB
-	Virtual addr size:   47 bits (user space = 0 to 0x00007fffffffffff)
+	Virtual addr size:   47 bits (user space = 0x0 to 0x00007fffffffffff)
 	Cache as seen by current process:
-		  Max cache line: 64 bytes
-		  L1 data cache:  64 KB (65536 bytes)
-		  L1 inst cache:  128 KB (131072 bytes)
-		  L2 cache:       4 MB (4194304 bytes)
+		Max cache line: 64 bytes
+		L1 data cache:  64 KB (65536 bytes)
+		L1 inst cache:  128 KB (131072 bytes)
+		L2 cache:       4 MB (4194304 bytes)
 
 OS:
+	Version:             14.7.6
 	Time base frequency: 24000000
 	Page size:           4 KB (4096 bytes)
 	Stack size:          16 KB (16384 bytes)
 	Kernel version:      <BIG KERNEL VERSION STRING>
+
+Online Displays:
+	Display ID: 1 (main display)
+		Current res:  1680px x 1050px
+		Refresh rate: 60.0hz
+		Size:         286.39mm x 178.99mm
+		Builtin:      true
+		Active:       true
+		Asleep:       false
+		Model:        xxxxx
+		Serial:       yyyyyyyyyy
+		Vendor no:    zzz
 ```
