@@ -23,6 +23,7 @@ typedef struct {
 typedef struct {
   char version[128];
   int32_t stack_size;
+  char osproductversion[16];
 } Kern;
 
 typedef struct {
@@ -333,9 +334,10 @@ void PrintSysctl(const Sysctl *const sysctl)
   printf("\nMemory:\n");
   printf("\tTotal physical:      %lld GB\n",
          sysctl->hw.memsize/(GB(1)));
-  printf("\tVirtual addr size:   %d bits (user space = 0x%#x to %#018llx)\n",
-         sysctl->machdep.virtual_address_size, 0,
-         ((uint64_t)1 << sysctl->machdep.virtual_address_size) - 1);
+  MAYBE(sysctl->machdep.virtual_address_size,
+        printf("\tVirtual addr size:   %d bits (user space = 0x%#x to %#018llx)\n",
+               sysctl->machdep.virtual_address_size, 0,
+               ((uint64_t)1 << sysctl->machdep.virtual_address_size) - 1));
   printf("\tCache as seen by current process:\n");
   printf("\t\tMax cache line: %lld bytes%s\n",
          sysctl->hw.cachelinesize, sysctl->hw.cachelinesize > 64 ? " (cache line is probably 64 KB)" : "");
@@ -351,6 +353,8 @@ void PrintSysctl(const Sysctl *const sysctl)
 
 
   printf("\nOS:\n");
+  printf("\tVersion:             %s\n",
+         sysctl->kern.osproductversion);
   printf("\tTime base frequency: %lld\n",
          sysctl->hw.tbfrequency);
   printf("\tPage size:           %lld KB (%lld bytes)\n",
@@ -420,6 +424,7 @@ int main(void)
   GetSystemInfo("hw.tbfrequency", &sysctl.hw.tbfrequency);
   GetSystemInfo("hw.pagesize", &sysctl.hw.pagesize);
   GetSystemInfo("kern.stack_size", &sysctl.kern.stack_size);
+  GetSystemInfo_("kern.osproductversion", &sysctl.kern.osproductversion, sizeof(sysctl.kern.osproductversion));
   GetSystemInfo_("kern.version", sysctl.kern.version, sizeof(sysctl.kern.version));
 
   PrintSysctl(&sysctl);
