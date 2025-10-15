@@ -404,24 +404,24 @@ void PrintOnlineDisplaysInfo(void)
       CGDisplayModeRef displayMode = CGDisplayCopyDisplayMode(displayId);
       double refreshRate           = CGDisplayModeGetRefreshRate(displayMode);
 
-      printf("\tDisplay ID: %d%s\n", displayId,
+      printf("\tDisplay ID:          %d%s\n", displayId,
              displayId == mainDisplayId ? " (main display)" : "");
-      printf("\t\tCurrent res:  %dpx x %dpx\n", displayPixelsWide, displayPixelsHigh);
+      printf("\t\tCurrent res:    %dpx x %dpx\n", displayPixelsWide, displayPixelsHigh);
 
       if (displayMode) {
-        printf("\t\tRefresh rate: %.1fhz\n", refreshRate);
+        printf("\t\tRefresh rate:   %.1fhz\n", refreshRate);
       }
 
-      printf("\t\tSize:         %0.2fmm x %0.2fmm\n",
+      printf("\t\tSize:           %0.2fmm x %0.2fmm\n",
              displayScreenSize.width, displayScreenSize.height);
-      printf("\t\tBuiltin:      %s\n", displayBuiltin ? "true" : "false");
-      printf("\t\tActive:       %s\n", displayActive ? "true" : "false");
-      printf("\t\tAsleep:       %s\n", displayAsleep ? "true" : "false");
-      printf("\t\tModel:        %u%s\n", displayModelNumber,
+      printf("\t\tBuiltin:        %s\n", displayBuiltin ? "true" : "false");
+      printf("\t\tActive:         %s\n", displayActive ? "true" : "false");
+      printf("\t\tAsleep:         %s\n", displayAsleep ? "true" : "false");
+      printf("\t\tModel:          %u%s\n", displayModelNumber,
              displayModelNumber == kDisplayProductIDGeneric ? "(generic model number)" : "");
-      printf("\t\tSerial:       %u%s\n", displaySerialNumber,
+      printf("\t\tSerial:         %u%s\n", displaySerialNumber,
              displaySerialNumber == 0x0 ? "(unknown)" : "");
-      printf("\t\tVendor no:    %u%s\n", displayVendorNumber,
+      printf("\t\tVendor no:      %u%s\n", displayVendorNumber,
              displayVendorNumber == kDisplayVendorIDUnknown ? "(unknown)" : "");
     }
   }
