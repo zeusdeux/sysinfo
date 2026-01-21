@@ -355,10 +355,17 @@ void PrintSysctl(const Sysctl *const sysctl)
          sysctl->hw.l1dcachesize/(KB(1)), sysctl->hw.l1dcachesize);
   printf("\t\tL1 inst cache:  %lld KB (%lld bytes)\n",
          sysctl->hw.l1icachesize/(KB(1)), sysctl->hw.l1icachesize);
-  printf("\t\tL2 cache:       %lld MB (%lld bytes)\n",
-         sysctl->hw.l2cachesize/(MB(1)), sysctl->hw.l2cachesize);
+
+  if (sysctl->hw.l2cachesize < MB(1)) {
+    printf("\t\tL2 cache:       %lld KB (%lld bytes)\n",
+           sysctl->hw.l2cachesize/(KB(1)), sysctl->hw.l2cachesize);
+
+  } else {
+    printf("\t\tL2 cache:       %lld MB (%lld bytes)\n",
+           sysctl->hw.l2cachesize/(MB(1)), sysctl->hw.l2cachesize);
+  }
   MAYBE(sysctl->hw.l3cachesize,
-        printf("\tL3 cache size:       %lld KB (%lld bytes)\n",
+        printf("\t\tL3 cache size:  %lld KB (%lld bytes)\n",
                sysctl->hw.l3cachesize/(KB(1)), sysctl->hw.l3cachesize));
 
 
