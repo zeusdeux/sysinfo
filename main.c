@@ -168,7 +168,14 @@ const char *GetCPUFamilyName(int32_t family)
       return "Intel Broadwell";
     case CPUFAMILY_INTEL_SKYLAKE:
       return "Intel Skylake";
+    case CPUFAMILY_INTEL_ICELAKE:
+      return "Intel Icelake";
+    case CPUFAMILY_INTEL_COMETLAKE:
+      return "Intel Cometlake";
+    case CPUFAMILY_INTEL_KABYLAKE:
+      return "Intel Kabylake";
 
+    case CPUFAMILY_UNKNOWN:
     default:
       return "Unknown";
   }
@@ -191,6 +198,8 @@ const char *GetCPUSubFamilyName(int32_t subfamily)
       return "ARM HC HD";
     case CPUSUBFAMILY_ARM_HA:
       return "ARM HA";
+
+    case CPUSUBFAMILY_UNKNOWN:
     default:
       return "Unknown";
   }
