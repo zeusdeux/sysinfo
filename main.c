@@ -323,15 +323,17 @@ void PrintSysctl(const Sysctl *const sysctl)
                  sysctl->hw.perflevelN[i].l1icachesize/(KB(1)),
                  sysctl->hw.perflevelN[i].l1icachesize));
     MAYBE(sysctl->hw.perflevelN[i].l2cachesize,
-          printf("\t\tL2 cache:       %d MB (%d bytes%s)\n",
-                 sysctl->hw.perflevelN[i].l2cachesize/(MB(1)),
+          printf("\t\tL2 cache:       %d %s (%d bytes%s)\n",
+                 sysctl->hw.perflevelN[i].l2cachesize/(sysctl->hw.perflevelN[i].l2cachesize < MB(1) ? KB(1) : MB(1)),
+                 sysctl->hw.perflevelN[i].l2cachesize < MB(1) ? "KB" : "MB",
                  sysctl->hw.perflevelN[i].l2cachesize,
                  sysctl->hw.perflevelN[i].cpusperl2 != FAILED_FETCH
                    ? FormatStr(", shared by %d CPUs", sysctl->hw.perflevelN[i].cpusperl2)
                    : ""));
     MAYBE(sysctl->hw.perflevelN[i].l3cachesize,
-          printf("\t\tL3 cache:       %d MB (%d bytes%s)\n",
-                 sysctl->hw.perflevelN[i].l3cachesize/(MB(1)),
+          printf("\t\tL3 cache:       %d %s (%d bytes%s)\n",
+                 sysctl->hw.perflevelN[i].l3cachesize/(sysctl->hw.perflevelN[i].l3cachesize < MB(1) ? KB(1) : MB(1)),
+                 sysctl->hw.perflevelN[i].l3cachesize < MB(1) ? "KB" : "MB",
                  sysctl->hw.perflevelN[i].l3cachesize,
                  sysctl->hw.perflevelN[i].cpusperl3 != FAILED_FETCH
                    ? FormatStr(", shared by %d CPUs", sysctl->hw.perflevelN[i].cpusperl3)
@@ -355,15 +357,10 @@ void PrintSysctl(const Sysctl *const sysctl)
          sysctl->hw.l1dcachesize/(KB(1)), sysctl->hw.l1dcachesize);
   printf("\t\tL1 inst cache:  %lld KB (%lld bytes)\n",
          sysctl->hw.l1icachesize/(KB(1)), sysctl->hw.l1icachesize);
-
-  if (sysctl->hw.l2cachesize < MB(1)) {
-    printf("\t\tL2 cache:       %lld KB (%lld bytes)\n",
-           sysctl->hw.l2cachesize/(KB(1)), sysctl->hw.l2cachesize);
-
-  } else {
-    printf("\t\tL2 cache:       %lld MB (%lld bytes)\n",
-           sysctl->hw.l2cachesize/(MB(1)), sysctl->hw.l2cachesize);
-  }
+  printf("\t\tL2 cache:       %lld %s (%lld bytes)\n",
+         sysctl->hw.l2cachesize/(sysctl->hw.l2cachesize < MB(1) ? KB(1): MB(1)),
+         sysctl->hw.l2cachesize < MB(1) ? "KB": "MB",
+         sysctl->hw.l2cachesize);
   MAYBE(sysctl->hw.l3cachesize,
         printf("\t\tL3 cache size:  %lld KB (%lld bytes)\n",
                sysctl->hw.l3cachesize/(KB(1)), sysctl->hw.l3cachesize));
