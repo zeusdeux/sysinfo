@@ -12,7 +12,7 @@
 
 
 typedef struct {
-  char    brand_string[32];
+  char    brand_string[64];
   int32_t virtual_address_size;
   struct {
     int32_t cores_per_package;
@@ -433,6 +433,11 @@ int main(void)
 
   /* CPU */
   GetSystemInfo_("machdep.cpu.brand_string", sysctl.machdep.brand_string, sizeof(sysctl.machdep.brand_string));
+
+  if (strcmp(sysctl.machdep.brand_string, "") == 0) {
+    strlcpy(sysctl.machdep.brand_string, "Unknown", sizeof(sysctl.machdep.brand_string));
+  }
+
   GetSystemInfo("hw.packages", &sysctl.hw.packages);
   GetSystemInfo("hw.nperflevels", &sysctl.hw.nperflevels);
 
