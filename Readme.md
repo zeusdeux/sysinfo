@@ -5,7 +5,7 @@ A small tool to print system information on Apple machines.
 ## Quick start
 
 ```
-curl -L https://github.com/zeusdeux/sysinfo/releases/download/v1.0.2/sysinfo -o ./sysinfo
+curl -L https://github.com/zeusdeux/sysinfo/releases/download/v1.0.3/sysinfo -o ./sysinfo
 chmod +x ./sysinfo
 ./sysinfo
 ```
