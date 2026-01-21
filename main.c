@@ -428,7 +428,7 @@ void PrintOnlineDisplaysInfo(void)
       printf("\t\tAsleep:         %s\n", displayAsleep ? "true" : "false");
       printf("\t\tModel:          %u%s\n", displayModelNumber,
              displayModelNumber == kDisplayProductIDGeneric ? "(generic model number)" : "");
-      printf("\t\tSerial:         %u%s\n", displaySerialNumber,
+      printf("\t\tSerial:         %u %s\n", displaySerialNumber,
              displaySerialNumber == 0x0 ? "(unknown)" : "");
       printf("\t\tVendor no:      %u%s\n", displayVendorNumber,
              displayVendorNumber == kDisplayVendorIDUnknown ? "(unknown)" : "");
